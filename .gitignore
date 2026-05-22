@@ -18,3 +18,14 @@
 /node_modules/
 /result
 /result-*
+
+# Files commonly created while testing this plugin
+clipboard*.html
+clipboard*.png
+clipboard*.jpg
+clipboard*.jpeg
+clipboard*.gif
+clipboard*.bmp
+clipboard*.tif
+clipboard*.tiff
+clipboard*.webp
