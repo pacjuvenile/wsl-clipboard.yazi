@@ -1,44 +1,34 @@
-# 安装教程
+# 安装
 
-这份文档按“小白步骤”写。
+## 依赖
 
-## 方案一：从 GitHub 安装
+- Windows 10/11
+- WSL
+- Yazi 和 `ya`
+- WSL 内可调用 `powershell.exe`
+- WSL 内存在 `timeout`、`wslpath`、`test`、`cp`、`mv`、`rm`、`realpath`
 
-前提：插件仓库已经发布到 GitHub，仓库名是 `wsl-clipboard.yazi`。
-
-1. 打开 WSL 终端。
-
-2. 确认 `ya` 可用：
-
-```sh
-ya --version
-```
-
-如果提示找不到 `ya`，说明你的 Yazi 安装不完整，需要先处理 Yazi。
-
-3. 安装插件：
+检查基础依赖：
 
 ```sh
-ya pkg add <your-github-name>/wsl-clipboard
+command -v yazi ya powershell.exe timeout wslpath
 ```
 
-例子：
+## 使用 `ya pkg` 安装
 
 ```sh
 ya pkg add pacjuvenile/wsl-clipboard
 ```
 
-注意：仓库名应是 `wsl-clipboard.yazi`，但 `ya pkg add` 里通常写 `wsl-clipboard`。
+GitHub 仓库名是 `wsl-clipboard.yazi`，安装时的包名是 `wsl-clipboard`。
 
-`ya pkg add` 不会自动改你的 `keymap.toml`。下一步必须手动配置快捷键。
-
-4. 编辑 Yazi keymap：
+`ya pkg add` 只安装插件文件，不会修改 Yazi 快捷键配置。安装后需要手动编辑：
 
 ```sh
-nvim ~/.config/yazi/keymap.toml
+~/.config/yazi/keymap.toml
 ```
 
-把下面内容加入文件：
+加入：
 
 ```toml
 [mgr]
@@ -54,46 +44,28 @@ prepend_keymap = [
 ]
 ```
 
-如果你的 `keymap.toml` 已经有 `[mgr]` 和 `prepend_keymap`，不要重复写第二个 `[mgr]`，只把数组里的几行合进去。
+如果 `keymap.toml` 已经有 `[mgr]` 和 `prepend_keymap`，只合并数组条目，不要重复创建第二个 `[mgr]` 表。
 
-5. 完全退出 Yazi，再重新打开。
+修改后重新启动 Yazi。
 
-## 方案二：本地手动安装
-
-适合你还没有把仓库发到 GitHub 的阶段。
-
-1. 进入仓库目录：
-
-```sh
-cd /path/to/wsl-clipboard.yazi
-```
-
-2. 复制插件文件：
+## 从源码安装
 
 ```sh
 mkdir -p ~/.config/yazi/plugins/wsl-clipboard.yazi
 cp main.lua ~/.config/yazi/plugins/wsl-clipboard.yazi/main.lua
 ```
 
-3. 合并快捷键配置：
-
-```sh
-nvim ~/.config/yazi/keymap.toml
-```
-
-参考 `examples/keymap.toml`。
-
-4. 重新打开 Yazi。
+然后把 `examples/keymap.toml` 合并到 `~/.config/yazi/keymap.toml`。
 
 ## 升级
 
-如果你是通过 `ya pkg add` 安装的：
+通过 `ya pkg` 安装时：
 
 ```sh
 ya pkg upgrade
 ```
 
-如果你是本地手动安装的，重新复制 `main.lua`：
+手动安装时，重新复制 `main.lua`：
 
 ```sh
 cp main.lua ~/.config/yazi/plugins/wsl-clipboard.yazi/main.lua
