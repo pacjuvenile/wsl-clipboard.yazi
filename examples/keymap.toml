@@ -1,0 +1,11 @@
+[mgr]
+prepend_keymap = [
+	{ on = "y", run = [ "yank", "plugin wsl-clipboard -- sync --copy" ], desc = "Yank to Windows clipboard" },
+	{ on = "x", run = [ "yank --cut", "plugin wsl-clipboard -- sync --cut" ], desc = "Cut to Windows clipboard" },
+	{ on = "p", run = "plugin wsl-clipboard -- paste", desc = "Paste from Windows clipboard" },
+	{ on = "P", run = "plugin wsl-clipboard -- paste --force", desc = "Paste from Windows clipboard, overwrite" },
+	{ on = "i", run = "plugin wsl-clipboard -- image", desc = "Save clipboard image" },
+	{ on = "I", run = "plugin wsl-clipboard -- image --force", desc = "Save clipboard image, overwrite" },
+	{ on = "Y", run = [ "unyank", "plugin wsl-clipboard -- clear" ], desc = "Clear Yazi yank and Windows clipboard" },
+	{ on = "X", run = [ "unyank", "plugin wsl-clipboard -- clear" ], desc = "Clear Yazi yank and Windows clipboard" },
+]
