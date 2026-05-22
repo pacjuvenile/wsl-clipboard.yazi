@@ -142,4 +142,4 @@ Yazi 日志通常在：
 
 ## License
 
-MIT
+BSD-2-Clause
