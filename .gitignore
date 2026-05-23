@@ -12,12 +12,16 @@
 .luarc.json
 /.idea/
 /.vscode/
+/.cache/
 /coverage/
 /tmp/
 /dist/
 /node_modules/
 /result
 /result-*
+/helper/target/
+!/bin/
+!/bin/wsl-clipboard-yazi.exe
 
 # Files commonly created while testing this plugin
 clipboard*.html

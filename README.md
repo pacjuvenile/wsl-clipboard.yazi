@@ -19,6 +19,18 @@ A Yazi plugin that bridges file and image clipboard operations between WSL and W
 
 This plugin is designed for Windows + WSL. It is not a general Linux, Wayland, X11, or macOS clipboard plugin.
 
+### Bundled Native Helper
+
+This repository ships a native Windows helper at `bin/wsl-clipboard-yazi.exe`. The Lua plugin loads that executable from its own plugin directory, so no separate deploy step is needed.
+
+If you change the helper source or want to rebuild the bundled executable:
+
+```sh
+./scripts/build-helper.sh
+```
+
+`y` / `x` file clipboard writes and toggle-off ownership checks require the helper and do not fall back to PowerShell. Read-oriented operations such as `p` can still use the PowerShell path when needed. `WSL_CLIPBOARD_YAZI_HELPER` can override the helper path for local debugging.
+
 ## Installation
 
 Install with Yazi's package manager:
@@ -34,14 +46,29 @@ The GitHub repository is named `wsl-clipboard.yazi`, while the package name used
 ```toml
 [mgr]
 prepend_keymap = [
-	{ on = "y", run = [ "yank", "plugin wsl-clipboard -- sync --copy" ], desc = "Yank to Windows clipboard" },
-	{ on = "x", run = [ "yank --cut", "plugin wsl-clipboard -- sync --cut" ], desc = "Cut to Windows clipboard" },
+	# native yazi keymaps
+	{ on = "<Esc>", run = [ "escape --all", "unyank" ], desc = "Clear find, visual, filter, selection, search and yank state" },
+	{ on = "v", run = "toggle", desc = "Toggle hovered file selection" },
+	{ on = "V", run = "visual_mode", desc = "Enter visual mode to select a continuous range of files" },
+
+	# wsl-clipboard plugin keymaps
+	{ on = "y", run = [ "escape --visual", "plugin wsl-clipboard -- toggle --copy" ], desc = "Toggle yank to Windows clipboard" },
+	{ on = "Y", run = "noop", desc = "Disable default yank cancel" },
+	{ on = "x", run = [ "escape --visual", "plugin wsl-clipboard -- toggle --cut" ], desc = "Toggle cut to Windows clipboard" },
+	{ on = "X", run = "noop", desc = "Disable default yank cancel" },
 	{ on = "p", run = "plugin wsl-clipboard -- paste", desc = "Paste from Windows clipboard" },
-	{ on = "P", run = "plugin wsl-clipboard -- paste --force", desc = "Paste from Windows clipboard, overwrite" },
-	{ on = "i", run = "plugin wsl-clipboard -- image", desc = "Save clipboard image" },
-	{ on = "I", run = "plugin wsl-clipboard -- image --force", desc = "Save clipboard image, overwrite" },
-	{ on = "Y", run = [ "unyank", "plugin wsl-clipboard -- clear" ], desc = "Clear Yazi yank and Windows clipboard" },
-	{ on = "X", run = [ "unyank", "plugin wsl-clipboard -- clear" ], desc = "Clear Yazi yank and Windows clipboard" },
+	{ on = "P", run = "noop", desc = "Disable default overwrite paste" },
+]
+
+[input]
+prepend_keymap = [
+	{ on = "d", run = "delete", desc = "Delete selected characters" },
+	{ on = "D", run = [ "delete", "move eol" ], desc = "Delete until EOL"},
+	{ on = "x", run = [ "delete", "move 1 --in-operating" ], desc = "Delete current character" },
+	{ on = "c", run = "delete --insert", desc = "Delete selected characters and enter insert mode" },
+	{ on = "C", run = [ "delete --insert", "move eol" ], desc = "Delete until EOL and enter insert mode" },
+	{ on = "s", run = "noop", desc = "Disable default substitute" },
+	{ on = "S", run = "noop", desc = "Disable default substitute line" }
 ]
 ```
 
@@ -52,23 +79,30 @@ Restart Yazi after changing the keymap.
 For local testing or source installs:
 
 ```sh
-mkdir -p ~/.config/yazi/plugins/wsl-clipboard.yazi
-cp main.lua ~/.config/yazi/plugins/wsl-clipboard.yazi/main.lua
+git clone https://github.com/pacjuvenile/wsl-clipboard.yazi \
+	~/.config/yazi/plugins/wsl-clipboard.yazi
 ```
 
 Then merge `examples/keymap.toml` into `~/.config/yazi/keymap.toml`.
+
+Install the whole plugin directory, including `bin/wsl-clipboard-yazi.exe`. Do not copy only `main.lua`.
+
+To validate the helper outside Yazi:
+
+```sh
+cd ~/.config/yazi/plugins/wsl-clipboard.yazi
+./bin/wsl-clipboard-yazi.exe --trace diagnose
+./scripts/smoke-helper.sh
+```
 
 ## Usage
 
 | Key | Action |
 | --- | --- |
-| `y` | Yank selected or hovered files in Yazi and sync them to the Windows clipboard as copy |
-| `x` | Yank selected or hovered files in Yazi and sync them to the Windows clipboard as cut |
+| `y` | Toggle selected or hovered files as copy in Yazi and the Windows clipboard |
+| `x` | Toggle selected or hovered files as cut in Yazi and the Windows clipboard |
 | `p` | Paste files, folders, HTML, or images from the Windows clipboard into the current Yazi directory |
-| `P` | Paste from the Windows clipboard with overwrite behavior |
-| `i` | Save image data from the Windows clipboard |
-| `I` | Save image data from the Windows clipboard with overwrite behavior |
-| `Y` / `X` | Clear Yazi yank state and the Windows clipboard |
+| `Y` / `X` / `P` | Disabled by the recommended keymap |
 
 ## Clipboard Behavior
 
@@ -81,7 +115,11 @@ Clipboard formats are handled in this order:
 
 Plain text is intentionally ignored in `p` paste flow. Yazi is a file manager; this plugin does not materialize text clipboard content as `clipboard.txt`.
 
-When a target already exists, `p` chooses a unique name such as `file_1.txt`. `P` uses overwrite behavior.
+When a target already exists, `p` asks whether to overwrite it. Choosing no creates a unique name such as `file_1.txt`.
+
+When pasting an image, `p` opens an empty name prompt. Press Enter without typing to use the default timestamp name, such as `clipboard-20260523-153000.bmp`. Type a name without an extension to use the detected clipboard image format, or type a supported extension to save as that format. Supported image output extensions are `png`, `jpg`, `jpeg`, `bmp`, `tif`, `tiff`, and `gif`. `svg` and `pdf` are not supported image output formats.
+
+Pressing `y` or `x` again on the same selected or hovered files cancels the Yazi yank state. The native helper performs the ownership check and clears the Windows clipboard only when the clipboard still contains this plugin's ownership marker plus the same file list and copy/cut intent written by the plugin; newer screenshots, text, externally copied files, or other clipboard content are left untouched. `Y` and `X` are disabled in the recommended keymap so cancellation lives on the lowercase toggle keys. `P` is disabled because overwrite choice lives inside `p`.
 
 ## Debugging
 
@@ -97,13 +135,14 @@ Then inspect Yazi's log:
 rg -n "wsl-clipboard|Clipboard" ~/.local/state/yazi/yazi.log
 ```
 
+`y` / `x` writes dispatch the helper through a short-lived Linux shell bridge with a base64 argv payload, so Yazi does not wait on the Windows `.exe` process directly. With `WSL_CLIPBOARD_DEBUG=1`, background helper traces are written to `~/.local/state/yazi/wsl-clipboard-helper.log`. For standalone helper checks, run `./bin/wsl-clipboard-yazi.exe --trace diagnose` or `./scripts/smoke-helper.sh` from the plugin directory.
+
 ## Notes
 
-- `P` and `I` can overwrite existing targets.
-- `Y` and `X` clear the Windows system clipboard, not only Yazi's internal yank state.
+- `Y`, `X`, and `P` are mapped to `noop` in the recommended keymap to avoid falling back to Yazi's local clipboard behavior.
 - Large file or directory operations can run for a while and currently do not show progress.
-- A short `1 left` status flash can appear while the plugin probes the Windows clipboard through PowerShell.
-- Rename/input mode paste behavior is not changed by this plugin.
+- A short `1 left` status flash can appear while the plugin probes the Windows clipboard. File-copy `y` / `x` operations use the native helper directly; `p` may still probe multiple clipboard formats.
+- The plugin still exposes `plugin wsl-clipboard -- image` as an optional explicit image-save command, but `p` already handles images and is the recommended default entry.
 
 ## More Documentation
 
